@@ -6,10 +6,10 @@ Graphical user interface (GUI) in MATLAB for fast **Ca**lcium **tr**ansients **e
 * Extract a summary image of the experiment.
 * Find cells by pattern matching using cross-correlation with basic gaussian templates.
 * Add cells manually.
-* Extract calcium traces 
-* Remove noise, Airy disk and photobleaching tendency from calcium traces by aura filter.
+* Extract calcium transients. 
+* Remove noise, Airy disk and photobleaching tendency from calcium transients by aura filter.
 * Delete cells manually.
-* Get binary raster activity by the first time derivative of calcium traces.
+* Get binary raster activity by the first time derivative of calcium transients.
 
 ## Author
 **Jesús Pérez-Ortega**
