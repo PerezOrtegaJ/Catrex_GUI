@@ -11,5 +11,7 @@ Graphical user interface (GUI) in MATLAB for fast **Ca**lcium **tr**ansients **e
 * Delete cells manually.
 * Get binary raster activity by the first time derivative of calcium transients.
 
+Clone the repository and run the GUI file "Catrex_GUI.m".
+
 ## Author
 **Jesús Pérez-Ortega**
