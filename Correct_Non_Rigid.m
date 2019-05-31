@@ -24,35 +24,46 @@ end
 video_registered = zeros(h,w,n,class(video));
 motion = cell(n,1);
 
+% filter video
+video_filtered = Scale(imfilter(Scale(video),Generate_Cell_Template(4),'symmetric'));
+
 % Set first reference
-reference = video(:,:,1);
-video_registered(:,:,1) = reference;
+reference = video_filtered(:,:,1);
+video_registered(:,:,1) = video(:,:,1);
 continues_max = 0;
+tic
 for i = 2:n
     % Adjust histogram
-    image = video(:,:,i);
+    image = video_filtered(:,:,i);
 
     % Get displacement
-    [motion_i,registered] = imregdemons(image,reference,options.iterations,...
+    [motion_i,new_ref] = imregdemons(image,reference,options.iterations,...
         'AccumulatedFieldSmoothing',options.AccumulatedFieldSmoothing,...
         'PyramidLevels',options.pyramid_levels,...
         'DisplayWaitBar',false);
     
+    % Apply motion to original image
+    motion{i} = motion_i;
+        
     % Ignore if exceeds a maximum displacement 
     max_diff = max(abs(minmax(motion_i(:)')));
+    %disp(max_diff)
     if max_diff>options.MaximumDisplacement
         continues_max = continues_max + 1;
         disp(['Maximum displacement detected (frame ' num2str(i) ')'])
-        motion{i} = zeros([h w 2]);
-        video_registered(:,:,i) = image;
+        
+        % Ignore frame
+        video_registered(:,:,i) = video(:,:,i);
+        
         % Change reference if maximum difference is continuos
         if continues_max>2
             reference = image;
         end
     else
-        motion{i} = motion_i;
-        reference = registered;
-        video_registered(:,:,i) = registered;
+        % Correct motion
+        video_registered(:,:,i) = imwarp(video(:,:,i),motion_i);
+        
+        reference = new_ref;
         continues_max = 0;
     end
     

@@ -22,7 +22,7 @@ function varargout = Catrex_GUI(varargin)
 
 % Edit the above text to modify the response to help Catrex_GUI
 
-% Last Modified by GUIDE v2.5 02-May-2019 12:03:05
+% Last Modified by GUIDE v2.5 02-May-2019 23:02:41
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -89,7 +89,7 @@ Uncheck_Views(handles)
 set(handles.btnVideo,'Checked','on')
 
 % Set the file name in the title
-title = ['/' num2str(n_cells) ' - ' data.Movie.FileName ' - fCatrex GUI'];
+title = ['/' num2str(n_cells) ' - ' data.Movie.FileName ' - Catrex GUI'];
 set(handles.figImage,'name',['1' title])
 
 % Enable menu
@@ -174,11 +174,11 @@ end
 function Uncheck_Views(handles)
 set(handles.btnVideo,'Checked','off')
 set(handles.btnNormalized,'Checked','off')
+set(handles.btnAverage,'Checked','off')
 set(handles.btnImageSTD,'Checked','off')
 set(handles.btnNormMax,'Checked','off')
 set(handles.btnXCorr,'Checked','off')
 set(handles.btnMask,'Checked','off')
-
 
 %% Delete ROIs
 function [xy_updated,id_deleted] = Delete_ROIs(xy,xy_delete,radius)
@@ -227,15 +227,14 @@ tic; disp('Computing cross-correlation image...')
 % Read properties
 image_class = class(handles.hImage.CData);
 factor = double(intmax(image_class));
-image = cast(Scale(double(data.Movie.NormMax)+data.Movie.ImageSTD)*factor,image_class);
-%image = cast(Scale(data.Movie.ImageSTD)*factor,image_class);
-%image = cast(Scale(data.Movie.NormMax)*factor,image_class);
+image = cast(Scale(data.Movie.ImageSTD)*factor,image_class);
 
 % Get template
 template = Generate_Cell_Template(Get_Cell_Radius(data));
 
 % Compute cross-correlation 
 xcorr = Get_Correlation_Image(image,template);
+xcorr(xcorr<0) = 0;
 
 % Write data in workspace
 data.ROIs.XCorr = xcorr;
@@ -282,7 +281,7 @@ set(handles.sldCell,'Enable','off')
 
 %% -- Update --
 %% Update ROIs
-function handles = Update_ROIs(handles)
+function handles = Update_ROIs(handles);
 if strcmp(get(handles.btnDrawROIs,'Checked'),'on')
     % Delete the ROIs
     if isfield(handles,'ROIs')
@@ -484,8 +483,7 @@ if path
     
     % Assign data name
     name = file_name(1:end-4);
-    name = strrep(name,'-','_');
-    name = strrep(name,'.','_');
+    name = Validate_Name(name);
     
     % Get info from the file
     info = imfinfo(file);
@@ -650,8 +648,47 @@ if strcmp(get(hObject,'Checked'),'off')
     % Plot the current image
     sldImage_Moving(handles)
 end
-        
-%% 3. View std image
+
+%% 3. View average image
+function btnAverage_Callback(hObject,~, handles)
+if strcmp(get(hObject,'Checked'),'off')
+    % Read data
+    data = Read_Data(handles.name);
+
+    % Check the current menu item
+    Uncheck_Views(handles)
+    set(hObject,'Checked','on')
+
+    % Check if normalized
+    if ~Exist_Field(data,'Norm')
+        data = Compute_Normalization(data);
+    end
+    
+    % Plot summary
+    image_class = class(handles.hImage.CData);
+    factor = double(intmax(image_class));
+    image = cast(Scale(data.Movie.ImageAverage)*factor,image_class);
+    if isvalid(handles.hImage)
+        set(handles.hImage,'CData',image);
+    else
+        % Plot the first image
+        hImage = imshow(image,'parent',handles.axImage);
+
+        % Save changes in handles
+        handles.hImage = hImage;
+        guidata(hObject,handles)
+    end
+
+    % Change title
+    start = length(num2str(data.Movie.Frames))+2;
+    set(handles.figImage,'name',['Average' handles.title(start:end)])
+    
+    % Set properties
+    set(hObject,'Checked','on')
+    set(handles.sldImage,'Enable','off')    
+end
+
+%% 4. View std image
 function btnImageSTD_Callback(hObject,~,handles)
 if strcmp(get(hObject,'Checked'),'off')
     % Read data
@@ -690,7 +727,7 @@ if strcmp(get(hObject,'Checked'),'off')
     set(handles.sldImage,'Enable','off')    
 end
 
-%% 4. View maximum normalized image
+%% 5. View maximum normalized image
 function btnNormMax_Callback(hObject,~,handles)
 if strcmp(get(hObject,'Checked'),'off')
     % Read data
@@ -730,7 +767,7 @@ if strcmp(get(hObject,'Checked'),'off')
 end
 
 
-%% 5. View cross correlation
+%% 6. View cross correlation
 function btnXCorr_Callback(hObject,~,handles)
 if strcmp(get(hObject,'Checked'),'off')
     % Read data
@@ -742,11 +779,9 @@ if strcmp(get(hObject,'Checked'),'off')
     end
 
     % Get image with the same depth
-    if data.Movie.Depth==8
-        image = Equalize_Image(uint8(data.ROIs.XCorr*255));
-    else
-        image = Equalize_Image(uint16(data.ROIs.XCorr*255));
-    end
+    image_class = class(handles.hImage.CData);
+    factor = double(intmax(image_class));
+    image = cast(Scale(data.ROIs.XCorr)*factor,image_class);
     
     % Plot cross-correlation
     if isvalid(handles.hImage)
@@ -770,7 +805,7 @@ if strcmp(get(hObject,'Checked'),'off')
     set(handles.sldImage,'Enable','off')
 end
 
-%% 6. View mask
+%% 7. View mask
 function btnMask_Callback(hObject,~,handles)
 if strcmp(get(hObject,'Checked'),'off')
     % Read data
@@ -784,21 +819,12 @@ if strcmp(get(hObject,'Checked'),'off')
     if ~Exist_Field(data,'XCorr')
         data = Compute_XCorr(handles,data);
     end
-
-    %test delete
-    image_class = class(handles.hImage.CData);
-    factor = double(intmax(image_class));
-    image = cast(Scale(double(data.Movie.NormMax).*data.Movie.ImageSTD)*factor,image_class);
-    %test delete
-    
     
     % Get image with the same depth
-%     accuracy = Get_Accuracy(data);
-%     if data.Movie.Depth==8
-%         image = Equalize_Image(uint8((data.ROIs.XCorr>accuracy)*255));
-%     else
-%         image = Equalize_Image(uint16((data.ROIs.XCorr>accuracy)*255));
-%     end
+    image_class = class(handles.hImage.CData);
+    factor = double(intmax(image_class));
+    accuracy = Get_Accuracy(data);
+    image = cast(Scale(data.ROIs.XCorr>accuracy)*factor,image_class);
     
     % Plot cross-correlation improved
     if isvalid(handles.hImage)
@@ -868,7 +894,7 @@ set(handles.mnuProcess,'Enable','on')
 set(handles.mnuOptions,'Enable','on')
 
 % Draw is checked
-Update_ROIs(handles)
+Update_ROIs(handles);
 
 %% Draw ROIs
 function btnDrawROIs_Callback(hObject,~,handles)
@@ -994,7 +1020,7 @@ set(handles.mnuProcess,'Enable','on')
 set(handles.mnuOptions,'Enable','on')
 
 % Draw is checked
-Update_ROIs(handles)
+Update_ROIs(handles);
 
 %% Delete All ROIs
 function btnDeleteROIs_Callback(hObject,~,handles)
@@ -1014,13 +1040,13 @@ Write_Data(data)
 Remove_All_Transients(handles)
 
 % Udpate ROIs drawn
-Update_ROIs(handles)
+Update_ROIs(handles);;
 
 %% -- Menu Process --
-%% Motion correction
-function btnMotion_Callback(hObject,~,handles)
+%% Rigid body correction
+function btnRigid_Callback(hObject,~,handles)
 tic
-disp('Adjusting motion...')
+disp('Adjusting motion (rigid body)...')
 
 % Read data
 data = Read_Data(handles.name);
@@ -1032,16 +1058,65 @@ else
     video = data.Movie.Images;
 end
 
-% Get default options to monomodal motion correction
-options.iterations = [64 32 4];
-options.pyramid_levels = 3;
-options.AccumulatedFieldSmoothing = 1; %1.5 ok
-options.MaximumDisplacement = 15;
-%options.MaximumDisplacement = 100;
+% Rigid options to monomodal motion correction
+[optimizer, metric] = imregconfig('monomodal');
+options.optimizer = optimizer;
+options.metric = metric;
+options.optimizer.GradientMagnitudeTolerance = 0.001;
+options.optimizer.MinimumStepLength = 0.001;
+options.optimizer.MaximumStepLength = 0.1;
+options.optimizer.MaximumIterations = 100;
+options.optimizer.RelaxationFactor = 0.3;
+options.MaximumDisplacement = 20;
 
-% Pre-procesing video
-%video_filtered = Scale(video);
-%video_filtered = Scale(imfilter(Scale(video),Generate_Cell_Template(4),'symmetric'));
+% Detect motion
+[~,corrected] = Correct_Rigid(video,options);
+
+t=toc; disp(['   Done (' num2str(t) ' seconds)'])
+
+% Write data
+data.Movie.ImagesBeforeCorrected = video;
+data.Movie.Images = corrected;
+
+% Remove data computed previously
+Remove_All_Transients(handles)
+data = Remove_Data(data,'Norm');
+data = Remove_Data(data,'NormMax');
+data = Remove_Data(data,'ImageAverage');
+data = Remove_Data(data,'ImageSTD');
+data = Remove_Data(data,'XCorr');
+Write_Data(data)
+
+% Write in handles
+Uncheck_Views(handles)
+set(handles.btnVideo,'Checked','on')
+handles.ViewNorm = false;
+guidata(hObject,handles)
+
+% Update image
+sldImage_Moving(handles)
+
+
+%% Non-rigid body correction
+function btnNonRigid_Callback(hObject,~,handles)
+tic
+disp('Adjusting motion (Non-rigid body)...')
+
+% Read data
+data = Read_Data(handles.name);
+
+% If previously corrected
+if isfield(data.Movie,'ImagesBeforeCorrected')
+    video = data.Movie.ImagesBeforeCorrected;
+else
+    video = data.Movie.Images;
+end
+
+% Non-rigid options for motion correction
+options.iterations = [128 32 8];
+options.pyramid_levels = 3;
+options.AccumulatedFieldSmoothing = 1.5;
+options.MaximumDisplacement = 30;
 
 % Detect motion
 [~,corrected] = Correct_Non_Rigid(video,options);
@@ -1069,6 +1144,7 @@ guidata(hObject,handles)
 
 % Update image
 sldImage_Moving(handles)
+
 
 %% Find cells
 function btnFindCells_Callback(hObject,~,handles)
@@ -1104,7 +1180,7 @@ if ~isempty(xy)
     Write_Data(data)
 
     % Update ROIs
-    Update_ROIs(handles)
+    Update_ROIs(handles);;
 else
     disp('   No cells found!')
 end
@@ -1162,7 +1238,7 @@ else
     end
     
     % Plot all transients
-    Plot_Transients(data.Transients.Filtered,handles.name,'separated',Get_FPS(data))
+    Plot_Transients(data.Transients.Filtered,handles.name,'raster',Get_FPS(data))
     %Save_Figure(name)
 end
 
@@ -1229,11 +1305,11 @@ if ~isempty(answer)
             data = Compute_XCorr(handles,data);
 
             % Write data
-            Write_Data(data)
+            Write_Data(data);
 
             % Update
-            Update_ROIs(handles)
-            Update_XCorr(handles)
+            Update_ROIs(handles);;
+            Update_XCorr(handles);
         end
     else
         warning('Cell radius was set to: 4')
@@ -1271,7 +1347,7 @@ if ~isempty(answer)
             Write_Data(data)
 
             % Update ROIs
-            Update_ROIs(handles)
+            Update_ROIs(handles);
         end
     end
 end
