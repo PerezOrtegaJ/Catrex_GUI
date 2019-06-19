@@ -458,17 +458,20 @@ if handles.Transients
     end
 
     % Draw cell ROI
-    cell_size = Get_Cell_Radius(data)+1;
-    cell_ROI = viscircles(handles.axImage,xy, cell_size,'Color','g','LineWidth',3,...
-        'EnhanceVisibility',false);
+    if strcmp(get(handles.btnDrawROIs,'checked'),'on')
+        cell_size = Get_Cell_Radius(data)+1;
+        cell_ROI = viscircles(handles.axImage,xy, cell_size,'Color','g','LineWidth',3,...
+            'EnhanceVisibility',false);
+        
+        % Save ROIs object
+        handles.CellROI = cell_ROI;
+        guidata(hObject,handles)
+    end
 
     % Plot transients
     Plot_Single_Transient(data.Transients.Raw(value,:),smooth(data.Transients.Filtered(value,:))',...
         data.Transients.F0(value,:),value,handles.name,Get_FPS(data),get(handles.sldImage,'value'))
 
-    % Save ROIs object
-    handles.CellROI = cell_ROI;
-    guidata(hObject,handles)
 end
 
 %% -- Menu File --
@@ -928,6 +931,12 @@ else
         delete(handles.ROIs)
     end
     
+    % Delete the cell ROI
+    if isfield(handles,'CellROI')
+        axes(handles.axImage)
+        delete(handles.CellROI)
+    end
+    
     % Change properties
     set(hObject,'Checked','off')
 end
@@ -1250,7 +1259,7 @@ data = Read_Data(handles.name);
 % Compute transients
 if isfield(data,'Transients')
     tic; disp('Get raster form transients...')
-    raster = Get_Raster_From_Transients(data.Transients.Filtered,1);
+    raster = Get_Raster_From_Transients(data.Transients.Filtered);
     data.Transients.Raster = raster;
     Write_Data(data)
     t=toc; disp(['   Done (' num2str(t) ' seconds)'])

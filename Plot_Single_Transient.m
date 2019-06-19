@@ -1,5 +1,7 @@
 function Plot_Single_Transient(transient,filtered,f0,number,name,fps,cursor)
-% Plot Ca transients
+% Plot single Ca transients
+%
+%       Plot_Single_Transient(transient,filtered,f0,number,name,fps,cursor)
 %
 % Jesus Perez-Ortega March-19
 

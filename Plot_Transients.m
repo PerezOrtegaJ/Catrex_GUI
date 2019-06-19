@@ -1,5 +1,9 @@
-function Plot_Transients(transients,name,mode,fps)
+function Plot_Transients(transients,name,mode,fps,new_figure)
 % Plot Ca transients
+%
+%       Plot_Transients(transients,name,mode,fps)
+%
+%       default: name = ''; mode = 'raster'; fps = 1; new_figure = true
 %
 % Jesus Perez-Ortega March-19
 
@@ -8,19 +12,27 @@ switch(nargin)
         name = [];
         mode = 'raster';
         fps = 1;
+        new_figure = true;
     case 2
         mode = 'raster';
         fps = 1;
+        new_figure = true;
     case 3
         fps = 1;
+        new_figure = true;
+    case 4
+        new_figure = true;
 end
 
 % Get information
 [n_cells,n_frames] = size(transients);
 
 % Set Figure
-Set_Figure(['Transients - ' name],[0 0 1400 400]);
-Set_Axes('axTransients',[0 0 1 1]); hold on
+if new_figure
+    Set_Figure(['Transients - ' name],[0 0 1400 400]);
+    Set_Axes('axTransients',[0 0 1 1]); hold on
+end
+
 title(strrep([name ' - N = ' num2str(n_cells)],'_','-'))
 switch (mode)
     case 'raster'
@@ -34,7 +46,7 @@ switch (mode)
         
         % Plot
         for i = 1:n_cells
-            plot(transients(i,:),'color',colors(i,:))
+            plot(transients(i,:),'color',colors(i,:)); hold on
         end
         ylabel('Intensity (\DeltaF)')
     case 'steps'
@@ -54,7 +66,7 @@ switch (mode)
                 c=c-1;
             end
             time = ((step_x*i):(step_x*i+n_frames-1))/2.55;
-            plot(time,transients(i,:)+step_y*i,'color',colors(i,:))
+            plot(time,transients(i,:)+step_y*i,'color',colors(i,:)); hold on
         end    
         ylabel('Intensity (\DeltaF)')
     case 'separated'
@@ -67,7 +79,7 @@ switch (mode)
         % Plot
         for i = 1:n_cells
             signal = transients(i,:)-min(transients(i,:));
-            plot(signal+increment,'color',colors(i,:))
+            plot(signal+increment,'color',colors(i,:)); hold on
             plot([0 n_frames],repmat(min(signal+increment),1,2),'--','color',[0.5 0.5 0.5])
             increment = increment + max(signal);
         end    
@@ -81,20 +93,4 @@ switch (mode)
 end
 xlim([1 n_frames])
 
-if(n_frames/fps<30)
-    set(gca,'box','off','xtick',0:fps:n_frames,...
-        'xticklabel',0:n_frames/fps)
-    xlabel('Time (s)'); 
-elseif(n_frames/fps/60<3)
-    set(gca,'box','off','xtick',0:10*fps:n_frames,...
-        'xticklabel',0:n_frames/fps/10)
-    xlabel('Time (s)'); 
-elseif(n_frames/fps/60<60)
-    set(gca,'box','off','xtick',0:60*fps:n_frames,...
-        'xticklabel',0:n_frames/fps/60)
-    xlabel('Time (min)'); 
-else
-    set(gca,'box','off','xtick',0:60*60*fps:n_frames,...
-        'xticklabel',0:n_frames/fps/60/60)
-    xlabel('Time (h)'); 
-end
+Set_Label_Time(n_frames,fps)
