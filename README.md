@@ -8,7 +8,5 @@ GUI in MATLAB for **f**ast **ca**lcium **tr**ansients **ex**traction from imagin
 * Extract raw calcium transients.
 * Remove noise, Airy disk and photobleaching tendency from calcium transients by aura filter.
 
-Clone the repository and run the GUI file "Catrex_GUI.m".
-
 ## Author
 **Jesús Pérez-Ortega**

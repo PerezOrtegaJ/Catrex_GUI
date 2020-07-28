@@ -14,7 +14,7 @@ end
 [h,w,n] = size(video);
 
 % filter video
-video_filtered = Scale(imfilter(Scale(video),Generate_Cell_Template(4),'symmetric'));
+video_filtered = rescale(imfilter(rescale(video),Generate_Cell_Template(4),'symmetric'));
 
 % Initialize variables
 motion = cell(n,1);

@@ -78,7 +78,7 @@ if adjust_image
     end
 else
     % Rescale the values of the image
-    equalized = Scale(image,0,max_value);
+    equalized = rescale(image,0,max_value);
     switch(depth)
         case 8
             equalized = uint8(equalized);

@@ -71,47 +71,36 @@ if data_num>1
     name = data_strings{data_num};
 
     % Check if exist
+    compatible = false;
     if evalin('base',['exist(''' name ''',''var'')'])
         data = evalin('base',name);
         
         if strcmp(handles.fig.Tag,'btnLoadWorkspace')
             % Check if has movie field
             if isfield(data,'Movie')
-                set(handles.txtMessage,'string',data.Movie.FileName)
-                set(handles.txtMessage,'ForeGroundColor',[0 0.5 0])
-                
-                % Save name in current figure
-                handles.name = name;
-                guidata(hObject,handles);
-                
-                % Load data
-                Load(handles)
-            else
-                set(handles.txtMessage,'string','not compatible')
-                set(handles.txtMessage,'ForeGroundColor',[0.5 0 0]);
-
+                name = ['data_' data.Movie.DataName];
+                assignin('base',name,data)
+                compatible = true;
             end
         else
-            % Check if has structure of a movie
+            % Check if variable has structure of a movie
             if ndims(data) == 3
-                set(handles.txtMessage,'string','Compatible')
-                set(handles.txtMessage,'ForeGroundColor',[0 0.5 0])
-                
-                % Save
-                handles.name = name;
-                guidata(hObject,handles);
-                
-                % Load data
-                Load(handles)
-            else
-                set(handles.txtMessage,'string','not compatible')
-                set(handles.txtMessage,'ForeGroundColor',[0.5 0 0]);
+                compatible = true;
             end
         end
+    end
+    
+    % If variable is compatible
+    if compatible
+        % Save name in current figure
+        handles.name = name;
+        guidata(hObject,handles);
+
+        % Load data
+        Load(handles)
     else
-        set(handles.txtMessage,'string','not in workspace')
-        set(handles.txtMessage,'ForeGroundColor',[0.5 0 0])
-        popWorkspace_CreateFcn(hObject,[],[])
+        set(handles.txtMessage,'string','not compatible')
+        set(handles.txtMessage,'ForeGroundColor',[0.5 0 0]);
     end
 end
 
@@ -121,9 +110,14 @@ function Load(handles)
 if strcmp(handles.fig.Tag,'btnOpenWorkspace')
     % Get data from video
     name = handles.name;
-    data = evalin('base',name);
-    [h,w,n] = size(data);
-    d = class(data);
+    movie = evalin('base',name);
+    [h,w,n] = size(movie);
+    
+    switch class(movie)
+    case {'single','double'}
+        movie = uint16(rescale(movie).*double(intmax('uint16')));
+    end
+    d = class(movie);
     d = str2num(d(5:end));
 
     % Save name in current figure
@@ -134,9 +128,14 @@ if strcmp(handles.fig.Tag,'btnOpenWorkspace')
     data_movie.Movie.Height = h;
     data_movie.Movie.Depth = d;
     data_movie.Movie.Frames = n;
-    data_movie.Movie.Images = data;
+    data_movie.Movie.Images = movie;
     data_movie.Movie.CorrectedMotion = false;
 
+    % defaults
+    data_movie.ROIs.CellRadius = 4;
+    data_movie.ROIs.AuraRadius = 30;
+    data_movie.Movie.FPS = 12.5; %12.3457;
+    
     % Save in workspace
     name = ['data_' name];
     assignin('base',name,data_movie)
